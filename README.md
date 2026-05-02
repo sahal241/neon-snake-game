@@ -168,7 +168,7 @@ Contributions are welcome! Feel free to:
 
 ## 🎯 View Live
 
-Experience the game in AI Studio: https://ai.studio/apps/aec18915-468c-4098-8ca4-13be3f55c34e
+Experience the game: https://neon-snake-game-beta.vercel.app
 
 ---
 
