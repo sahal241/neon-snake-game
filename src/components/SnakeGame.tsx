@@ -116,6 +116,9 @@ export default function SnakeGame() {
     return saved ? parseInt(saved, 10) : 0;
   });
 
+  const [swipeFlash, setSwipeFlash] = useState<'up' | 'down' | 'left' | 'right' | null>(null);
+  const touchStartRef = useRef<{ x: number, y: number } | null>(null);
+
   const state = useRef({
     snake: [{ x: 10, y: 10 }] as Point[],
     dir: { x: 0, y: -1 } as Point,
@@ -572,6 +575,58 @@ export default function SnakeGame() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, startGame]);
 
+  const triggerSwipeFlash = useCallback((dir: 'up' | 'down' | 'left' | 'right') => {
+    setSwipeFlash(dir);
+    setTimeout(() => setSwipeFlash(null), 150);
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (gameState !== 'PLAYING') return;
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  }, [gameState]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (gameState !== 'PLAYING' || !touchStartRef.current) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    
+    const dx = touchEndX - touchStartRef.current.x;
+    const dy = touchEndY - touchStartRef.current.y;
+    
+    const s = state.current;
+    
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > 30) {
+        if (dx > 0 && s.dir.x === 0) {
+          s.nextDir = { x: 1, y: 0 };
+          playSound('move', isMutedRef.current);
+          triggerSwipeFlash('right');
+        } else if (dx < 0 && s.dir.x === 0) {
+          s.nextDir = { x: -1, y: 0 };
+          playSound('move', isMutedRef.current);
+          triggerSwipeFlash('left');
+        }
+      }
+    } else {
+      if (Math.abs(dy) > 30) {
+        if (dy > 0 && s.dir.y === 0) {
+          s.nextDir = { x: 0, y: 1 };
+          playSound('move', isMutedRef.current);
+          triggerSwipeFlash('down');
+        } else if (dy < 0 && s.dir.y === 0) {
+          s.nextDir = { x: 0, y: -1 };
+          playSound('move', isMutedRef.current);
+          triggerSwipeFlash('up');
+        }
+      }
+    }
+    touchStartRef.current = null;
+  }, [gameState, triggerSwipeFlash]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -601,7 +656,21 @@ export default function SnakeGame() {
     <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto h-full px-2 sm:px-4">
       
       {/* Game Stage */}
-      <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#0a0a0a] border-2 border-zinc-800 ring-4 ring-black shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+      <div 
+        className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#0a0a0a] border-2 border-zinc-800 ring-4 ring-black shadow-[0_0_50px_rgba(0,0,0,0.5)] touch-none"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        
+        {/* Swipe Visual Feedback */}
+        {swipeFlash && (
+          <div className="absolute inset-0 pointer-events-none z-10 transition-opacity duration-150">
+            {swipeFlash === 'up' && <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-green-500/20 to-transparent" />}
+            {swipeFlash === 'down' && <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-green-500/20 to-transparent" />}
+            {swipeFlash === 'left' && <div className="absolute left-0 inset-y-0 w-16 bg-gradient-to-r from-green-500/20 to-transparent" />}
+            {swipeFlash === 'right' && <div className="absolute right-0 inset-y-0 w-16 bg-gradient-to-l from-green-500/20 to-transparent" />}
+          </div>
+        )}
         
         {/* Neon Lights at Top */}
         <div className="absolute top-0 inset-x-0 h-2 flex justify-center pointer-events-none z-20">
